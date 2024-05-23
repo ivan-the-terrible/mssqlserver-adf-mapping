@@ -20,6 +20,10 @@ all_views: dict = {}  # key: view_name, value: Node
 all_tables: dict = {}  # key: table_name, value: Node
 resolver = Resolver("name")
 
+documents_dir = "C:\\Users\\chwalik.i\\Documents"
+
+pipeline_dir = os.join(documents_dir, "da-ap-pda-napea-datafactory-backend", "pipeline")
+
 
 @dataclass
 class TableInView:
@@ -168,14 +172,9 @@ def bottomUpAttachment(parent_name: str):
 def analyzePipelines():
     # Build Tree
     visited_pipelines: list[str] = []
-    piplines = os.listdir(
-        "C:\\Users\\chwalik.i\\Documents\\da-ap-pda-napea-datafactory-backend\\pipeline"
-    )
+    piplines = os.listdir(pipeline_dir)
     for pipeline in piplines:
-        with open(
-            f"C:\\Users\\chwalik.i\\Documents\\da-ap-pda-napea-datafactory-backend\\pipeline\\{pipeline}",
-            "r",
-        ) as pipeline_file:
+        with open(os.join(pipeline_dir, pipeline), "r") as pipeline_file:
             # Read the name and create the node
             pipeline_json = json.load(pipeline_file)
             pipeline_name = pipeline_json["name"]
@@ -260,7 +259,9 @@ def analyzePipelines():
 
 def createImages():
     for pipeline_name, pipeline_node in complete_pipelines.items():
-        MermaidExporter(pipeline_node).to_file(f"images\\{pipeline_name}.txt")
+        MermaidExporter(pipeline_node).to_file(
+            os.join("images", f"{pipeline_name}.txt")
+        )
 
 
 def main():
@@ -268,10 +269,10 @@ def main():
     print("EXECUTING")
     table_result, view_result, sp_result = countReferences()
 
-    # with open("debug/raw-table-result.txt", "w") as result_file:
+    # with open(os.join("debug", "raw-table-result.txt"), "w") as result_file:
     #     pprint.pp(table_result, result_file)
-    # with open("debug/raw-view-result.txt", "w") as result_file:
-    # pprint.pp(view_result, result_file)
+    # with open(os.join("debug", "raw-view-result.txt"), "w") as result_file:
+    #     pprint.pp(view_result, result_file)
 
     analyzePipelines()
 

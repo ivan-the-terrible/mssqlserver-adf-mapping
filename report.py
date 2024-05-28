@@ -4,11 +4,11 @@ import json
 import os
 import pprint
 import time
-from collections import defaultdict
 from dataclasses import dataclass, field
 
 from anytree import Node, Resolver
 from anytree.exporter import MermaidExporter
+from dotenv import load_dotenv
 
 complete_pipelines: dict = {}  # key: pipeline_name, value: Node
 incomplete_pipelines: dict = (
@@ -19,12 +19,6 @@ all_stored_procedures: dict = {}  # key: stored_procedure_name, value: Node
 all_views: dict = {}  # key: view_name, value: Node
 all_tables: dict = {}  # key: table_name, value: Node
 resolver = Resolver("name")
-
-documents_dir = "C:\\Users\\chwalik.i\\Documents"
-
-pipeline_dir = os.path.join(
-    documents_dir, "da-ap-pda-napea-datafactory-backend", "pipeline"
-)
 
 
 @dataclass
@@ -175,6 +169,14 @@ def bottomUpAttachment(parent_name: str):
 
 
 def analyzePipelines():
+    load_dotenv()
+    pipeline_dir = os.getenv("PIPELINE_DIR")
+    if pipeline_dir is None:
+        print("PIPELINE_DIR not set")
+        return
+    if not os.path.exists(pipeline_dir) | os.path.isdir(pipeline_dir):
+        print(f"{pipeline_dir} does not exist or isn't directory")
+        return
     # Build Tree
     visited_pipelines: list[str] = []
     piplines = os.listdir(pipeline_dir)

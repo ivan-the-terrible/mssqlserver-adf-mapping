@@ -10,6 +10,7 @@ A directory called `images` will be created and the logic of taking MermaidJS ou
 - `npm install -g @mermaid-js/mermaid-cli`
 
 The above two will require Python and NodeJS.
+Mermaid CLI repo: <https://github.com/mermaid-js/mermaid-cli>
 
 ## ENV Values
 

@@ -22,7 +22,9 @@ resolver = Resolver("name")
 
 documents_dir = "C:\\Users\\chwalik.i\\Documents"
 
-pipeline_dir = os.join(documents_dir, "da-ap-pda-napea-datafactory-backend", "pipeline")
+pipeline_dir = os.path.join(
+    documents_dir, "da-ap-pda-napea-datafactory-backend", "pipeline"
+)
 
 
 @dataclass
@@ -160,7 +162,10 @@ def bottomUpAttachment(parent_name: str):
     for child in children:
         if incomplete_pipelines.get(child) is None:
             complete_child: Node = copy.deepcopy(complete_pipelines.get(child))
-            node.children += (complete_child,)
+
+            dp_root: Node = Resolver("name").get(node, "Dependent Pipelines")
+            dp_root.children += (complete_child,)
+
             children.remove(child)
             if len(children) == 0:
                 complete_pipelines[parent_name] = node
@@ -174,7 +179,7 @@ def analyzePipelines():
     visited_pipelines: list[str] = []
     piplines = os.listdir(pipeline_dir)
     for pipeline in piplines:
-        with open(os.join(pipeline_dir, pipeline), "r") as pipeline_file:
+        with open(os.path.join(pipeline_dir, pipeline), "r") as pipeline_file:
             # Read the name and create the node
             pipeline_json = json.load(pipeline_file)
             pipeline_name = pipeline_json["name"]
@@ -260,7 +265,7 @@ def analyzePipelines():
 def createImages():
     for pipeline_name, pipeline_node in complete_pipelines.items():
         MermaidExporter(pipeline_node).to_file(
-            os.join("images", f"{pipeline_name}.txt")
+            os.path.join("images", f"{pipeline_name}.txt")
         )
 
 
@@ -269,9 +274,9 @@ def main():
     print("EXECUTING")
     table_result, view_result, sp_result = countReferences()
 
-    # with open(os.join("debug", "raw-table-result.txt"), "w") as result_file:
+    # with open(os.path.join("debug", "raw-table-result.txt"), "w") as result_file:
     #     pprint.pp(table_result, result_file)
-    # with open(os.join("debug", "raw-view-result.txt"), "w") as result_file:
+    # with open(os.path.join("debug", "raw-view-result.txt"), "w") as result_file:
     #     pprint.pp(view_result, result_file)
 
     analyzePipelines()

@@ -1,3 +1,4 @@
+import codecs
 import copy
 import csv
 import json
@@ -19,6 +20,22 @@ all_stored_procedures: dict = {}  # key: stored_procedure_name, value: Node
 all_views: dict = {}  # key: view_name, value: Node
 all_tables: dict = {}  # key: table_name, value: Node
 resolver = Resolver("name")
+debug = False
+
+
+class MermaidExporter(MermaidExporter):
+    """
+    I needed to overwrite this class because I don't want the header and footer on the file.
+    Original to_file method would file.write("```mermaid\n")
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def to_file(self, filename):
+        with codecs.open(filename, "w", "utf-8") as file:
+            for line in self:
+                file.write("%s\n" % line)
 
 
 @dataclass
@@ -169,7 +186,6 @@ def bottomUpAttachment(parent_name: str):
 
 
 def analyzePipelines():
-    load_dotenv()
     pipeline_dir = os.getenv("PIPELINE_DIR")
     if pipeline_dir is None:
         print("PIPELINE_DIR not set")
@@ -266,20 +282,28 @@ def analyzePipelines():
 
 def createImages():
     for pipeline_name, pipeline_node in complete_pipelines.items():
-        MermaidExporter(pipeline_node).to_file(
-            os.path.join("images", f"{pipeline_name}.txt")
-        )
+        mermaid = MermaidExporter(pipeline_node)
+        if debug:
+            mermaid.to_file(os.path.join("images", "mermaid", f"{pipeline_name}.mmd"))
+        # call MermaidJS to generate the SVG
+
+        # output = os.path.join("images", f"{pipeline_name}.drawio")
 
 
 def main():
     start_time = time.time()
     print("EXECUTING")
-    table_result, view_result, sp_result = countReferences()
 
-    # with open(os.path.join("debug", "raw-table-result.txt"), "w") as result_file:
-    #     pprint.pp(table_result, result_file)
-    # with open(os.path.join("debug", "raw-view-result.txt"), "w") as result_file:
-    #     pprint.pp(view_result, result_file)
+    load_dotenv()
+    global debug
+    debug = os.getenv("DEBUG") == "True"
+
+    table_result, view_result, sp_result = countReferences()
+    if debug:
+        with open(os.path.join("debug", "raw-table-result.txt"), "w") as result_file:
+            pprint.pp(table_result, result_file)
+        with open(os.path.join("debug", "raw-view-result.txt"), "w") as result_file:
+            pprint.pp(view_result, result_file)
 
     analyzePipelines()
 

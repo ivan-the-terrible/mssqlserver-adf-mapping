@@ -11,6 +11,13 @@ A directory called `images` will be created and the logic of taking MermaidJS ou
 
 The above two will require Python and NodeJS.
 
+## ENV Values
+
+PIPELINE_DIR needs to be set to the directory of whatever ADF pipelines you'd like to parse.
+Typically ADF's version control has the name of the repo and then a directory called pipeline.
+
+If you need to create extra output, set DEBUG="True".
+
 ## Logic
 
 By running the queries within `queries.sql`, you can retrieve and export CSV data found in the `data` directory that lists the MS SQL Server's tables, views, and stored procedures.

@@ -281,13 +281,18 @@ def analyzePipelines():
 
 
 def createImages():
+    # Ensure MermaidJS is installed
+    has_mermaidJS = os.system("mmdc --version") == 0
+    if not has_mermaidJS:
+        print("MermaidJS not installed or mmdc command not callable. Exiting...")
+        return
+
     for pipeline_name, pipeline_node in complete_pipelines.items():
         mermaid = MermaidExporter(pipeline_node)
         if debug:
             mermaid.to_file(os.path.join("images", "mermaid", f"{pipeline_name}.mmd"))
-        # call MermaidJS to generate the SVG
 
-        # output = os.path.join("images", f"{pipeline_name}.drawio")
+        # call MermaidJS to generate the SVG
 
 
 def main():

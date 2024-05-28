@@ -1,9 +1,11 @@
 import codecs
+import concurrent.futures
 import copy
 import csv
 import json
 import os
 import pprint
+import subprocess
 import time
 from dataclasses import dataclass, field
 
@@ -287,12 +289,28 @@ def createImages():
         print("MermaidJS not installed or mmdc command not callable. Exiting...")
         return
 
-    for pipeline_name, pipeline_node in complete_pipelines.items():
-        mermaid = MermaidExporter(pipeline_node)
-        if debug:
-            mermaid.to_file(os.path.join("images", "mermaid", f"{pipeline_name}.mmd"))
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for pipeline_name, pipeline_node in complete_pipelines.items():
+            mermaid = MermaidExporter(pipeline_node)
+            if debug:
+                mermaid.to_file(
+                    os.path.join("images", "mermaid", f"{pipeline_name}.mmd")
+                )
 
-        # call MermaidJS to generate the SVG
+            # call MermaidJS to generate the SVG
+            pipeline_svg = os.path.join("images", "svg", f"{pipeline_name}.svg")
+            mermaid_text = "\n".join(mermaid)
+            future = executor.submit(
+                subprocess.run,
+                ["mmdc", "-i", "-", "-o", pipeline_svg],
+                input=mermaid_text.encode(),
+                shell=True,
+            )
+            futures.append(future)
+
+        # Wait for all tasks to complete
+        concurrent.futures.wait(futures)
 
 
 def main():

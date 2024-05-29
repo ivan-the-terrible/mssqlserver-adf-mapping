@@ -13,17 +13,6 @@ from anytree import Node, Resolver
 from anytree.exporter import MermaidExporter
 from dotenv import load_dotenv
 
-complete_pipelines: dict = {}  # key: pipeline_name, value: Node
-incomplete_pipelines: dict = (
-    {}
-)  # key: pipeline_name, value: tuple of Node and list of dependent pipelines
-
-all_stored_procedures: dict = {}  # key: stored_procedure_name, value: Node
-all_views: dict = {}  # key: view_name, value: Node
-all_tables: dict = {}  # key: table_name, value: Node
-resolver = Resolver("name")
-debug = False
-
 
 class MermaidExporter(MermaidExporter):
     """
@@ -52,7 +41,7 @@ class Pipeline:
 
 
 @dataclass
-class ObjectInStoredProcedure:
+class StoredProcedure:
     Name: str
     Pipelines: list[Pipeline] = field(default_factory=list)
     Total: int = 0
@@ -62,7 +51,7 @@ class ObjectInStoredProcedure:
 class Table:
     Name: str
     Views: list[TableInView] = field(default_factory=list)
-    StoredProcedures: list[ObjectInStoredProcedure] = field(default_factory=list)
+    StoredProcedures: list[StoredProcedure] = field(default_factory=list)
     Pipelines: list[Pipeline] = field(default_factory=list)
     TotalReferences: int = 0
 
@@ -70,8 +59,26 @@ class Table:
 @dataclass
 class View:
     Name: str
-    StoredProcedures: list[ObjectInStoredProcedure] = field(default_factory=list)
+    StoredProcedures: list[StoredProcedure] = field(default_factory=list)
     TotalReferences: int = 0
+
+
+complete_pipelines: dict = {}  # key: pipeline_name, value: Node
+incomplete_pipelines: dict = (
+    {}
+)  # key: pipeline_name, value: tuple of Node and list of dependent pipelines
+
+all_stored_procedures: dict = {}  # key: stored_procedure_name, value: Node
+all_views: dict = {}  # key: view_name, value: Node
+all_tables: dict = {}  # key: table_name, value: Node
+
+table_report: list[Table] = []
+view_report: list[View] = []
+sp_report: list[StoredProcedure] = []
+
+
+resolver = Resolver("name")
+debug = False
 
 
 def checkEnvironmentVariable(env_var: str) -> str:
@@ -85,7 +92,7 @@ def checkEnvironmentVariable(env_var: str) -> str:
     return dir_path
 
 
-def countReferences() -> tuple[list[Table], list[View], list[ObjectInStoredProcedure]]:
+def countReferences():
     mssqlserver_dir = os.getenv("MSSQL_SERVER_DATA_DIR")
 
     tables: list[Table] = []
@@ -117,13 +124,13 @@ def countReferences() -> tuple[list[Table], list[View], list[ObjectInStoredProce
             view_node = Node(view_name, children=(table_root,))
             all_views[view_name] = view_node
 
-    stored_procedures: list[ObjectInStoredProcedure] = []
+    stored_procedures: list[StoredProcedure] = []
     with open(os.path.join(path_prefix, "StoredProcedures.csv"), "r") as sp_file:
         reader = csv.reader(sp_file, delimiter="	")
         for row in reader:
             sp_name = row[0]
             sp_node = Node(sp_name)
-            stored_procedures.append(ObjectInStoredProcedure(sp_name))
+            stored_procedures.append(StoredProcedure(sp_name))
 
             definition = row[1].lower().replace("[", "").replace("]", "")
             table_root = Node("Tables")
@@ -132,7 +139,7 @@ def countReferences() -> tuple[list[Table], list[View], list[ObjectInStoredProce
                     references_in_def = definition.count(table.Name)
                     table.TotalReferences += references_in_def
                     table.StoredProcedures.append(
-                        ObjectInStoredProcedure(sp_name, references_in_def)
+                        StoredProcedure(sp_name, references_in_def)
                     )
 
                     table_root.children += (Node(table.Name),)
@@ -145,7 +152,7 @@ def countReferences() -> tuple[list[Table], list[View], list[ObjectInStoredProce
                     references_in_def = definition.count(view.Name)
                     view.TotalReferences += references_in_def
                     view.StoredProcedures.append(
-                        ObjectInStoredProcedure(sp_name, references_in_def)
+                        StoredProcedure(sp_name, references_in_def)
                     )
                     view_node = copy.deepcopy(all_views[view.Name])
                     view_root.children += (view_node,)
@@ -154,7 +161,10 @@ def countReferences() -> tuple[list[Table], list[View], list[ObjectInStoredProce
 
             all_stored_procedures[sp_name] = sp_node
 
-    return tables, views, stored_procedures
+    global table_report, view_report, sp_report
+    table_report = tables
+    view_report = views
+    sp_report = stored_procedures
 
 
 def createReport(tables: list[Table], views: list[View]):
@@ -342,17 +352,17 @@ def main():
     global debug
     debug = os.getenv("DEBUG") == "True"
 
-    table_result, view_result, sp_result = countReferences()
+    countReferences()
     if debug:
         with open(os.path.join("debug", "raw-table-result.txt"), "w") as result_file:
-            pprint.pp(table_result, result_file)
+            pprint.pp(table_report, result_file)
         with open(os.path.join("debug", "raw-view-result.txt"), "w") as result_file:
-            pprint.pp(view_result, result_file)
+            pprint.pp(view_report, result_file)
 
     analyzePipelines()
 
-    # createReport(table_result, view_result)
-    createImages()
+    createReport(table_report, view_report)
+    # createImages()
     print("DONE")
     elapsed_time = time.time() - start_time
     print("Execution time:", elapsed_time, "\n")

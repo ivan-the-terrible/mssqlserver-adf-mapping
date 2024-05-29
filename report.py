@@ -315,7 +315,15 @@ def createImages():
             mermaid_text = "\n".join(mermaid)
             future = executor.submit(
                 subprocess.run,
-                ["mmdc", "-i", "-", "-o", pipeline_svg],
+                [
+                    "mmdc",
+                    "--input",
+                    "-",
+                    "--output",
+                    pipeline_svg,
+                    "--configFile",
+                    "mermaid-config.json",
+                ],
                 input=mermaid_text.encode(),
                 shell=True,
             )

@@ -185,28 +185,30 @@ def createReport(tables: list[Table], views: list[View]):
 
 def bottomUpAttachment(parent_name: str):
     if incomplete_pipelines.get(parent_name) is None:
-        return  # they're in complete_pipelines
+        return complete_pipelines[parent_name]
     node, children = incomplete_pipelines[parent_name]
     copy_children = children.copy()
     for child in children:
+        complete_child = ""
         if incomplete_pipelines.get(child) is None:
-            complete_child: Node = copy.deepcopy(complete_pipelines.get(child))
-
-            dp_root: Node = Resolver("name").get(node, "Dependent Pipelines")
-            dp_root.children += (complete_child,)
-
-            copy_children.remove(child)
-            if len(copy_children) == 0:
-                complete_pipelines[parent_name] = node
-                del incomplete_pipelines[parent_name]
+            complete_child = copy.deepcopy(complete_pipelines.get(child))
         else:
-            bottomUpAttachment(child)
+            complete_child = copy.deepcopy(bottomUpAttachment(child))
+
+        dp_root: Node = Resolver("name").get(node, "Dependent Pipelines")
+        dp_root.children += (complete_child,)
+
+        copy_children.remove(child)
+        if len(copy_children) == 0:
+            complete_pipelines[parent_name] = node
+            del incomplete_pipelines[parent_name]
+            return complete_pipelines[parent_name]
 
 
 def analyzePipelines():
     pipeline_dir = checkEnvironmentVariable("PIPELINE_DIR")
     # Build Tree
-    visited_pipelines: list[str] = []
+    need_to_complete_pipelines: list[str] = []
     piplines = os.listdir(pipeline_dir)
     for pipeline in piplines:
         with open(os.path.join(pipeline_dir, pipeline), "r") as pipeline_file:
@@ -284,11 +286,11 @@ def analyzePipelines():
                     pipeline_node,
                     dependent_pipelines,
                 )
+                need_to_complete_pipelines.append(pipeline_name)
             else:
                 complete_pipelines[pipeline_name] = pipeline_node
-            visited_pipelines.append(pipeline_name)
     # Attach dependent pipelines
-    for pipeline_name in visited_pipelines:
+    for pipeline_name in need_to_complete_pipelines:
         bottomUpAttachment(pipeline_name)
 
 

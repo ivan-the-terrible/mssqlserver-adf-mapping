@@ -310,8 +310,9 @@ def createImages():
                     os.path.join("images", "mermaid", f"{pipeline_name}.mmd")
                 )
 
-            # call MermaidJS to generate the SVG
-            pipeline_svg = os.path.join("images", "svg", f"{pipeline_name}.svg")
+            # call MermaidJS to generate the diagram
+            # pipeline_svg = os.path.join("images", "svg", f"{pipeline_name}.svg")
+            pipeline_pdf = os.path.join("images", "pdf", f"{pipeline_name}.pdf")
             mermaid_text = "\n".join(mermaid)
             future = executor.submit(
                 subprocess.run,
@@ -320,7 +321,7 @@ def createImages():
                     "--input",
                     "-",
                     "--output",
-                    pipeline_svg,
+                    pipeline_pdf,
                     "--configFile",
                     "mermaid-config.json",
                 ],

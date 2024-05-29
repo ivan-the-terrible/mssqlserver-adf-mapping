@@ -1,3 +1,6 @@
 {
-  "maxEdges": 1000
+  "maxEdges": 1000,
+  "flowchart": {
+    "htmlLabels": "false"
+  }
 }

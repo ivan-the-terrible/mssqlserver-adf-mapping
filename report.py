@@ -86,7 +86,7 @@ def checkEnvironmentVariable(env_var: str) -> str:
 
 
 def countReferences() -> tuple[list[Table], list[View], list[ObjectInStoredProcedure]]:
-    mssqlserver_dir = checkEnvironmentVariable("MSSQL_SERVER_DATA_DIR")
+    mssqlserver_dir = os.getenv("MSSQL_SERVER_DATA_DIR")
 
     tables: list[Table] = []
     path_prefix = os.path.join("data", mssqlserver_dir)

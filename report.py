@@ -74,9 +74,22 @@ class View:
     TotalReferences: int = 0
 
 
+def checkEnvironmentVariable(env_var: str) -> str:
+    dir_path = os.getenv(env_var)
+    if dir_path is None:
+        print(f"{env_var} not set")
+        exit(1)
+    if not os.path.exists(dir_path) | os.path.isdir(dir_path):
+        print(f"{dir_path} does not exist or isn't directory")
+        exit(1)
+    return dir_path
+
+
 def countReferences() -> tuple[list[Table], list[View], list[ObjectInStoredProcedure]]:
+    mssqlserver_dir = checkEnvironmentVariable("MSSQL_SERVER_DATA_DIR")
+
     tables: list[Table] = []
-    path_prefix = os.path.join("data", "sqldb-cdh-na-sl-dev-01")
+    path_prefix = os.path.join("data", mssqlserver_dir)
     with open(os.path.join(path_prefix, "Tables.csv"), "r") as tables_file:
         for line in tables_file:
             table_name = line.strip()
@@ -188,13 +201,7 @@ def bottomUpAttachment(parent_name: str):
 
 
 def analyzePipelines():
-    pipeline_dir = os.getenv("PIPELINE_DIR")
-    if pipeline_dir is None:
-        print("PIPELINE_DIR not set")
-        return
-    if not os.path.exists(pipeline_dir) | os.path.isdir(pipeline_dir):
-        print(f"{pipeline_dir} does not exist or isn't directory")
-        return
+    pipeline_dir = checkEnvironmentVariable("PIPELINE_DIR")
     # Build Tree
     visited_pipelines: list[str] = []
     piplines = os.listdir(pipeline_dir)

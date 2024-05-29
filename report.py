@@ -95,6 +95,8 @@ def countReferences() -> tuple[list[Table], list[View], list[ObjectInStoredProce
             table_name = line.strip()
             tables.append(Table(table_name))
 
+            all_tables[table_name] = Node(table_name)
+
     views: list[View] = []
     with open(os.path.join(path_prefix, "Views.csv"), "r") as views_file:
         reader = csv.reader(views_file, delimiter="	")
@@ -103,7 +105,7 @@ def countReferences() -> tuple[list[Table], list[View], list[ObjectInStoredProce
             views.append(View(view_name))
             # check for Table reference
             table_root = Node("Tables")
-            definition = row[1].lower()
+            definition = row[1].lower().replace("[", "").replace("]", "")
             for table in tables:
                 if table.Name.lower() in definition:
                     references_in_def = definition.count(table.Name)
@@ -123,7 +125,7 @@ def countReferences() -> tuple[list[Table], list[View], list[ObjectInStoredProce
             sp_node = Node(sp_name)
             stored_procedures.append(ObjectInStoredProcedure(sp_name))
 
-            definition = row[1].lower()
+            definition = row[1].lower().replace("[", "").replace("]", "")
             table_root = Node("Tables")
             for table in tables:
                 if table.Name.lower() in definition:
@@ -185,6 +187,7 @@ def bottomUpAttachment(parent_name: str):
     if incomplete_pipelines.get(parent_name) is None:
         return  # they're in complete_pipelines
     node, children = incomplete_pipelines[parent_name]
+    copy_children = children.copy()
     for child in children:
         if incomplete_pipelines.get(child) is None:
             complete_child: Node = copy.deepcopy(complete_pipelines.get(child))
@@ -192,8 +195,8 @@ def bottomUpAttachment(parent_name: str):
             dp_root: Node = Resolver("name").get(node, "Dependent Pipelines")
             dp_root.children += (complete_child,)
 
-            children.remove(child)
-            if len(children) == 0:
+            copy_children.remove(child)
+            if len(copy_children) == 0:
                 complete_pipelines[parent_name] = node
                 del incomplete_pipelines[parent_name]
         else:
@@ -291,7 +294,7 @@ def analyzePipelines():
 
 def createImages():
     # Ensure MermaidJS is installed
-    has_mermaidJS = os.system("mmdc --version") == 0
+    has_mermaidJS = os.system("mmdc --version") == 0  # check exit status
     if not has_mermaidJS:
         print("MermaidJS not installed or mmdc command not callable. Exiting...")
         return

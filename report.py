@@ -81,22 +81,26 @@ resolver = Resolver("name")
 debug = False
 
 
-def checkEnvironmentVariable(env_var: str) -> str:
-    dir_path = os.getenv(env_var)
-    if dir_path is None:
-        print(f"{env_var} not set")
-        exit(1)
+def checkDirectory(dir_path: str) -> str:
     if not os.path.exists(dir_path) | os.path.isdir(dir_path):
         print(f"{dir_path} does not exist or isn't directory")
         exit(1)
     return dir_path
 
 
+def checkEnvironmentVariable(env_var: str) -> str:
+    dir_path = os.getenv(env_var)
+    if dir_path is None:
+        print(f"{env_var} not set")
+        exit(1)
+    return checkDirectory(dir_path)
+
+
 def countReferences():
     mssqlserver_dir = os.getenv("MSSQL_SERVER_DATA_DIR")
+    path_prefix = checkDirectory(os.path.join("data", mssqlserver_dir))
 
     tables: list[Table] = []
-    path_prefix = os.path.join("data", mssqlserver_dir)
     with open(os.path.join(path_prefix, "Tables.csv"), "r") as tables_file:
         for line in tables_file:
             table_name = line.strip()

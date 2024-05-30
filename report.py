@@ -2,11 +2,11 @@ import codecs
 import concurrent.futures
 import copy
 import csv
-import json
 import os
 import pprint
 import subprocess
 import time
+from collections import defaultdict
 from dataclasses import dataclass, field
 
 from anytree import Node, Resolver
@@ -264,22 +264,23 @@ def createReport():
     os.makedirs(output_dir, exist_ok=True)
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = []
-        futures.append(executor.submit(createTablesReport, output_dir))
-        futures.append(executor.submit(createViewsReport, output_dir))
-        futures.append(executor.submit(createStoredProceduresReport, output_dir))
-        futures.append(executor.submit(createPipelinesReport, output_dir))
+        futures = [
+            executor.submit(createTablesReport, output_dir),
+            executor.submit(createViewsReport, output_dir),
+            executor.submit(createStoredProceduresReport, output_dir),
+            executor.submit(createPipelinesReport, output_dir),
+        ]
         concurrent.futures.wait(futures)
 
 
 def bottomUpAttachment(parent_name: str):
-    if incomplete_pipelines.get(parent_name) is None:
+    if parent_name not in incomplete_pipelines:
         return complete_pipelines[parent_name]
     node, children = incomplete_pipelines[parent_name]
     copy_children = children.copy()
     for child in children:
         complete_child = ""
-        if incomplete_pipelines.get(child) is None:
+        if child not in incomplete_pipelines:
             complete_child = copy.deepcopy(complete_pipelines.get(child))
         else:
             complete_child = copy.deepcopy(bottomUpAttachment(child))

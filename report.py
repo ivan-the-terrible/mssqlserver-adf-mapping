@@ -58,7 +58,7 @@ class Pipeline:
 class StoredProcedure:
     Name: str
     StoredProcedureInPipelines: list[ObjectInPipeline] = field(default_factory=list)
-    Total: int = 0
+    TotalReferences: int = 0
 
 
 @dataclass
@@ -89,6 +89,7 @@ all_tables: dict = {}  # key: table_name, value: Node
 table_report: list[Table] = []
 view_report: list[View] = []
 sp_report: list[StoredProcedure] = []
+pipeline_report: list[Pipeline] = []
 
 
 resolver = Resolver("name")
@@ -216,6 +217,22 @@ def createViewsReport(output_dir: str):
     print("View report created")
 
 
+def createStoredProceduresReport(output_dir: str):
+    print("Creating stored procedures report")
+    sp_report.sort(key=lambda x: x.TotalReferences, reverse=True)
+    with open(
+        os.path.join(output_dir, "stored-procedures-report.txt"), "w"
+    ) as report_file:
+        for sp in sp_report:
+            report_file.write(f"Stored Procedure: {sp.Name}\n")
+            report_file.write(f"Total references: {sp.TotalReferences}\n")
+            report_file.write("Pipelines:\n")
+            for pipeline in sp.StoredProcedureInPipelines:
+                report_file.write(f"\t{pipeline.PipelineName}: {pipeline.Total}\n")
+            report_file.write("\n\n")
+    print("Stored procedures report created")
+
+
 def createReport():
     output_dir_name = os.getenv("OUTPUT_DIR")
     output_dir = os.path.join("reports", output_dir_name)
@@ -225,6 +242,7 @@ def createReport():
         futures = []
         futures.append(executor.submit(createTablesReport, output_dir))
         futures.append(executor.submit(createViewsReport, output_dir))
+        futures.append(executor.submit(createStoredProceduresReport, output_dir))
         concurrent.futures.wait(futures)
 
 

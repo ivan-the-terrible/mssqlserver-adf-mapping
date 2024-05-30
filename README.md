@@ -14,10 +14,14 @@ Mermaid CLI repo: <https://github.com/mermaid-js/mermaid-cli>
 
 ## ENV Values
 
-PIPELINE_DIR needs to be set to the directory of whatever ADF pipelines you'd like to parse.
+`PIPELINE_DIR` needs to be set to the directory of whatever ADF pipelines you'd like to parse.
 Typically ADF's version control has the name of the repo and then a directory called pipeline.
 
-If you need to create extra output, set DEBUG="True".
+`MSSQL_SERVER_DATA_DIR` is the name of the folder that exists within the `data` directory that contains Tables.csv, Views.csv, and StoredProcedures.csv.
+
+`OUTPUT_DIR` is the name of the folder that exists within the `images` and also the `reports` directory that will be generated to contain images and reports.
+
+If you need to create extra output, set `DEBUG="True"`.
 
 ## Logic
 

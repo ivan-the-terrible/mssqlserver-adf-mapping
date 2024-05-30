@@ -1,6 +1,11 @@
-/images
-/data
-/debug
-/reports
+!images/
+!data/
+!debug/
+!reports/
+
+images/*
+data/*
+debug/*
+reports/*
 
 .env

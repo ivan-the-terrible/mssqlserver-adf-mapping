@@ -245,9 +245,10 @@ def createStoredProceduresReport(output_dir: str):
 
 def createPipelinesReport(output_dir: str):
     print("Creating pipelines report")
-    pipeline_report.sort(key=lambda x: x.Total, reverse=True)
+    sorted_pipelines: list[Pipeline] = list(pipeline_report.values())
+    sorted_pipelines.sort(key=lambda x: x.Total, reverse=True)
     with open(os.path.join(output_dir, "pipeline-report.txt"), "w") as report_file:
-        for pipeline in pipeline_report:
+        for pipeline in sorted_pipelines:
             report_file.write(f"Pipeline: {pipeline.Name}\n")
             report_file.write(f"Total references: {pipeline.Total}\n")
             report_file.write("Pipelines:\n")
@@ -318,6 +319,17 @@ def analyzePipelines():
             # check for Stored Procedures, Table lookups, and dependent pipelines
             activities: list = pipeline_json["properties"]["activities"]
             dependent_pipelines: list = []
+
+            # reporting counts
+            total_references: dict[str, dict[str, int]] = {
+                "table": {},
+                "sp": {},
+                "dp": {},
+            }  # keep a list of tables/stored procedures/pipelines that are referenced in the pipeline
+            # we need to do this since a pipeline could reference the same activity multiple times
+            # ex. {sp: {sp_name: 2, sp_name2: 1}, table: {table_name: 1}, dp: {dp_name: 1}
+
+            # loop through Activities
             for activity in activities:
                 match activity["type"]:
                     case "SqlServerStoredProcedure":
@@ -342,12 +354,13 @@ def analyzePipelines():
                                 sp_node: Node = copy.deepcopy(stored_procedure)
                                 sp_root.children += (sp_node,)
                                 # reporting
-                                sp_report[stored_procedure_name].TotalReferences += 1
-                                sp_report[
+                                ref_count = total_references["sp"].get(
                                     stored_procedure_name
-                                ].StoredProcedureInPipelines.append(
-                                    ObjectInPipeline(pipeline_name)
                                 )
+                                ref_count = 1 if ref_count is None else ref_count + 1
+                                total_references["sp"][
+                                    stored_procedure_name
+                                ] = ref_count
 
                     case "Lookup":
                         # Some tables are hardcoded
@@ -370,10 +383,9 @@ def analyzePipelines():
                             table_node: Node = copy.deepcopy(table)
                             table_root.children += (table_node,)
                             # reporting
-                            table_report[table_name].TotalReferences += 1
-                            table_report[table_name].TableInPipelines.append(
-                                ObjectInPipeline(pipeline_name)
-                            )
+                            ref_count = total_references["table"].get(table_name)
+                            ref_count = 1 if ref_count is None else ref_count + 1
+                            total_references["table"][table_name] = ref_count
 
                     case "ExecutePipeline":  # the pipeline runs another pipeline
                         dependent_pipeline_name: str = activity["typeProperties"][
@@ -381,11 +393,29 @@ def analyzePipelines():
                         ]["referenceName"]
                         dependent_pipelines.append(dependent_pipeline_name)
                         # reporting
-                        pipeline_report[pipeline_name].Total += 1
-                        pipeline_report[pipeline_name].PipelineInPipelines.append(
-                            ObjectInPipeline(dependent_pipeline_name)
-                        )
+                        ref_count = total_references["dp"].get(dependent_pipeline_name)
+                        ref_count = 1 if ref_count is None else ref_count + 1
+                        total_references["dp"][dependent_pipeline_name] = ref_count
 
+            # reporting
+            for ref_type, ref_dict in total_references.items():
+                for ref_name, ref_count in ref_dict.items():
+                    if ref_type == "sp":
+                        sp_report[ref_name].TotalReferences += ref_count
+                        sp_report[ref_name].StoredProcedureInPipelines.append(
+                            ObjectInPipeline(pipeline_name, ref_count)
+                        )
+                    elif ref_type == "table":
+                        table_report[ref_name].TotalReferences += ref_count
+                        table_report[ref_name].TableInPipelines.append(
+                            ObjectInPipeline(pipeline_name, ref_count)
+                        )
+                    elif ref_type == "dp":
+                        pipeline_report[pipeline_name].Total += ref_count
+                        pipeline_report[pipeline_name].PipelineInPipelines.append(
+                            ObjectInPipeline(ref_name, ref_count)
+                        )
+            # tree
             bad_root = Node("Nonexistent")
             bad_root.children += (bad_table_root, bad_sp_root, bad_dp_root)
 

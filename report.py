@@ -185,16 +185,10 @@ def countReferences():
     sp_report = stored_procedures
 
 
-def createReport(tables: list[Table], views: list[View]):
-    output_dir_name = os.getenv("OUTPUT_DIR")
-    output_dir = os.path.join("reports", output_dir_name)
-    os.makedirs(output_dir, exist_ok=True)
-
-    tables.sort(key=lambda x: x.TotalReferences, reverse=True)
-    views.sort(key=lambda x: x.TotalReferences, reverse=True)
-
+def createTablesReport(output_dir: str):
+    table_report.sort(key=lambda x: x.TotalReferences, reverse=True)
     with open(os.path.join(output_dir, "table-report.txt"), "w") as report_file:
-        for table in tables:
+        for table in table_report:
             report_file.write(f"Table: {table.Name}\n")
             report_file.write(f"Total references: {table.TotalReferences}\n")
             report_file.write("Views:\n")
@@ -205,14 +199,29 @@ def createReport(tables: list[Table], views: list[View]):
                 report_file.write(f"\t{sp.StoredProcedureName}: {sp.Total}\n")
             report_file.write("\n\n")
 
-    with open(os.path.join(output_dir, "view-report.txt"), "w") as view_report_file:
-        for view in views:
-            view_report_file.write(f"View: {view.Name}\n")
-            view_report_file.write(f"Total references: {view.TotalReferences}\n")
-            view_report_file.write("Stored Procedures:\n")
+
+def createViewsReport(output_dir: str):
+    view_report.sort(key=lambda x: x.TotalReferences, reverse=True)
+    with open(os.path.join(output_dir, "view-report.txt"), "w") as report_file:
+        for view in view_report:
+            report_file.write(f"View: {view.Name}\n")
+            report_file.write(f"Total references: {view.TotalReferences}\n")
+            report_file.write("Stored Procedures:\n")
             for sp in view.ViewInStoredProcedures:
-                view_report_file.write(f"\t{sp.StoredProcedureName}: {sp.Total}\n")
-            view_report_file.write("\n\n")
+                report_file.write(f"\t{sp.StoredProcedureName}: {sp.Total}\n")
+            report_file.write("\n\n")
+
+
+def createReport():
+    output_dir_name = os.getenv("OUTPUT_DIR")
+    output_dir = os.path.join("reports", output_dir_name)
+    os.makedirs(output_dir, exist_ok=True)
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        futures.append(executor.submit(createTablesReport, output_dir))
+        futures.append(executor.submit(createViewsReport, output_dir))
+        concurrent.futures.wait(futures)
 
 
 def bottomUpAttachment(parent_name: str):
@@ -390,7 +399,7 @@ def main():
 
     analyzePipelines()
 
-    createReport(table_report, view_report)
+    createReport()
     # createImages()
     print("DONE")
     elapsed_time = time.time() - start_time

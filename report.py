@@ -510,7 +510,7 @@ def main():
     analyzePipelines()
 
     createReport()
-    # createImages()
+    createImages()
     print("DONE")
     elapsed_time = time.time() - start_time
     print("Execution time:", elapsed_time, "\n")

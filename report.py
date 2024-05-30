@@ -157,7 +157,7 @@ def countReferences():
                     references_in_def = definition.count(table.Name)
                     table.TotalReferences += references_in_def
                     table.TableInStoredProcedures.append(
-                        StoredProcedure(sp_name, references_in_def)
+                        ObjectInStoredProcedure(sp_name, references_in_def)
                     )
 
                     table_root.children += (Node(table.Name),)
@@ -170,7 +170,7 @@ def countReferences():
                     references_in_def = definition.count(view.Name)
                     view.TotalReferences += references_in_def
                     view.ViewInStoredProcedures.append(
-                        StoredProcedure(sp_name, references_in_def)
+                        ObjectInStoredProcedure(sp_name, references_in_def)
                     )
                     view_node = copy.deepcopy(all_views[view.Name])
                     view_root.children += (view_node,)
@@ -202,7 +202,7 @@ def createReport(tables: list[Table], views: list[View]):
                 report_file.write(f"\t{view.ViewName}: {view.Total}\n")
             report_file.write("Stored Procedures:\n")
             for sp in table.TableInStoredProcedures:
-                report_file.write(f"\t{sp.Name}: {sp.Total}\n")
+                report_file.write(f"\t{sp.StoredProcedureName}: {sp.Total}\n")
             report_file.write("\n\n")
 
     with open(os.path.join(output_dir, "view-report.txt"), "w") as view_report_file:
@@ -211,7 +211,7 @@ def createReport(tables: list[Table], views: list[View]):
             view_report_file.write(f"Total references: {view.TotalReferences}\n")
             view_report_file.write("Stored Procedures:\n")
             for sp in view.ViewInStoredProcedures:
-                view_report_file.write(f"\t{sp.Name}: {sp.Total}\n")
+                view_report_file.write(f"\t{sp.StoredProcedureName}: {sp.Total}\n")
             view_report_file.write("\n\n")
 
 

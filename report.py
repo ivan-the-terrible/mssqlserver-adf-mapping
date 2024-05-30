@@ -233,6 +233,20 @@ def createStoredProceduresReport(output_dir: str):
     print("Stored procedures report created")
 
 
+def createPipelinesReport(output_dir: str):
+    print("Creating pipelines report")
+    pipeline_report.sort(key=lambda x: x.Total, reverse=True)
+    with open(os.path.join(output_dir, "pipeline-report.txt"), "w") as report_file:
+        for pipeline in pipeline_report:
+            report_file.write(f"Pipeline: {pipeline.Name}\n")
+            report_file.write(f"Total references: {pipeline.Total}\n")
+            report_file.write("Pipelines:\n")
+            for pipeline in pipeline.PipelineInPipelines:
+                report_file.write(f"\t{pipeline.PipelineName}: {pipeline.Total}\n")
+            report_file.write("\n\n")
+    print("Pipelines report created")
+
+
 def createReport():
     output_dir_name = os.getenv("OUTPUT_DIR")
     output_dir = os.path.join("reports", output_dir_name)
@@ -243,6 +257,7 @@ def createReport():
         futures.append(executor.submit(createTablesReport, output_dir))
         futures.append(executor.submit(createViewsReport, output_dir))
         futures.append(executor.submit(createStoredProceduresReport, output_dir))
+        futures.append(executor.submit(createPipelinesReport, output_dir))
         concurrent.futures.wait(futures)
 
 

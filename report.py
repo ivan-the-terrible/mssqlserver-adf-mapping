@@ -364,29 +364,37 @@ def analyzePipelines():
                                 ] = ref_count
 
                     case "Lookup":
-                        # Some tables are hardcoded
-                        match activity["typeProperties"]["dataset"]["referenceName"]:
-                            case "NAPEA_Metadata_Table":
-                                table_name = "mtdta.INPUT_SRC_MTDTA"
-                            case "Backend_Dynamic_Table":
-                                table_name: str = (
-                                    activity["typeProperties"]["dataset"]["parameters"][
-                                        "TableName"
-                                    ]
-                                    .replace("[", "")
-                                    .replace("]", "")
+                        # sqlReaderQuery can sometimes be a dict or a string
+                        if (
+                            "AzureSqlSource"
+                            in activity["typeProperties"]["source"]["type"]
+                        ):
+                            sqlReaderQuery_prop = activity["typeProperties"]["source"][
+                                "sqlReaderQuery"
+                            ]
+                            if isinstance(sqlReaderQuery_prop, str):
+                                definition = sqlReaderQuery_prop
+                            else:
+                                definition: str | None = sqlReaderQuery_prop["value"]
+                            if definition is not None:
+                                query = (
+                                    definition.replace("[", "").replace("]", "").lower()
                                 )
-                        table: Node | None = all_tables.get(table_name)
-                        if table is None:
-                            bad_table_root.children += (Node(table_name),)
-                        else:
-                            # tree
-                            table_node: Node = copy.deepcopy(table)
-                            table_root.children += (table_node,)
-                            # reporting
-                            ref_count = total_references["table"].get(table_name)
-                            ref_count = 1 if ref_count is None else ref_count + 1
-                            total_references["table"][table_name] = ref_count
+
+                                for table in table_report.keys():
+                                    lowercase_table_name = table.lower()
+                                    if lowercase_table_name in query:
+                                        # reporting
+                                        ref_count = total_references["table"].get(table)
+                                        ref_count = (
+                                            1 if ref_count is None else ref_count + 1
+                                        )
+                                        total_references["table"][table] = ref_count
+                                        # tree
+                                        table_node: Node = copy.deepcopy(
+                                            all_tables[table]
+                                        )
+                                        table_root.children += (table_node,)
 
                     case "ExecutePipeline":  # the pipeline runs another pipeline
                         dependent_pipeline_name: str = activity["typeProperties"][

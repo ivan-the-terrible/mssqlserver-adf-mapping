@@ -77,19 +77,21 @@ class View:
     TotalReferences: int = 0
 
 
-complete_pipelines: dict = {}  # key: pipeline_name, value: Node
-incomplete_pipelines: dict = (
+complete_pipelines: dict[str, Node] = {}  # key: pipeline_name, value: Node
+incomplete_pipelines: dict[str, (Node, [])] = (
     {}
 )  # key: pipeline_name, value: tuple of Node and list of dependent pipelines
 
-all_stored_procedures: dict = {}  # key: stored_procedure_name, value: Node
-all_views: dict = {}  # key: view_name, value: Node
-all_tables: dict = {}  # key: table_name, value: Node
+all_stored_procedures: dict[str, Node] = {}  # key: stored_procedure_name, value: Node
+all_views: dict[str, Node] = {}  # key: view_name, value: Node
+all_tables: dict[str, Node] = {}  # key: table_name, value: Node
 
-table_report: list[Table] = []
-view_report: list[View] = []
-sp_report: list[StoredProcedure] = []
-pipeline_report: list[Pipeline] = []
+table_report: dict[str, Table] = {}  # key: table_name, value: Table
+view_report: dict[str, View] = {}  # key: view_name, value: View
+sp_report: dict[str, StoredProcedure] = (
+    {}
+)  # key: stored_procedure_name, value: StoredProcedure
+pipeline_report: dict[str, Pipeline] = {}  # key: pipeline_name, value: Pipeline
 
 
 resolver = Resolver("name")
@@ -115,75 +117,77 @@ def countReferences():
     mssqlserver_dir = os.getenv("MSSQL_SERVER_DATA_DIR")
     path_prefix = checkDirectory(os.path.join("data", mssqlserver_dir))
 
-    tables: list[Table] = []
+    global table_report, view_report, sp_report
+
     with open(os.path.join(path_prefix, "Tables.csv"), "r") as tables_file:
         for line in tables_file:
             table_name = line.strip()
-            tables.append(Table(table_name))
-
+            # reporting
+            table_report[table_name] = Table(table_name)
+            # tree
             all_tables[table_name] = Node(table_name)
 
-    views: list[View] = []
     with open(os.path.join(path_prefix, "Views.csv"), "r") as views_file:
         reader = csv.reader(views_file, delimiter="	")
         for row in reader:
             view_name: str = row[0].lower()
-            views.append(View(view_name))
+            view_report[view_name] = View(view_name)
             # check for Table reference
             table_root = Node("Tables")
             definition = row[1].lower().replace("[", "").replace("]", "")
-            for table in tables:
-                if table.Name.lower() in definition:
-                    references_in_def = definition.count(table.Name)
-                    table.TotalReferences += references_in_def
-                    table.TableInViews.append(ObjectInView(row[0], references_in_def))
-
-                    table_root.children += (Node(table.Name),)
+            for table_name in table_report.keys():
+                lowercase_table_name = table_name.lower()
+                if lowercase_table_name in definition:
+                    # reporting
+                    references_in_def = definition.count(lowercase_table_name)
+                    table_report[table_name].TotalReferences += references_in_def
+                    table_report[table_name].TableInViews.append(
+                        ObjectInView(view_name, references_in_def)
+                    )
+                    # tree
+                    table_root.children += (Node(table_name),)
 
             view_node = Node(view_name, children=(table_root,))
             all_views[view_name] = view_node
 
-    stored_procedures: list[StoredProcedure] = []
     with open(os.path.join(path_prefix, "StoredProcedures.csv"), "r") as sp_file:
         reader = csv.reader(sp_file, delimiter="	")
         for row in reader:
             sp_name = row[0]
             sp_node = Node(sp_name)
-            stored_procedures.append(StoredProcedure(sp_name))
+            sp_report[sp_name] = StoredProcedure(sp_name)
 
             definition = row[1].lower().replace("[", "").replace("]", "")
             table_root = Node("Tables")
-            for table in tables:
-                if table.Name.lower() in definition:
-                    references_in_def = definition.count(table.Name)
-                    table.TotalReferences += references_in_def
-                    table.TableInStoredProcedures.append(
+            for table_name in table_report.keys():
+                lowercase_table_name = table_name.lower()
+                if lowercase_table_name in definition:
+                    references_in_def = definition.count(lowercase_table_name)
+                    table_report[table_name].TotalReferences += references_in_def
+                    table_report[table_name].TableInStoredProcedures.append(
                         ObjectInStoredProcedure(sp_name, references_in_def)
                     )
 
-                    table_root.children += (Node(table.Name),)
+                    table_root.children += (Node(table_name),)
 
             sp_node.children += (table_root,)
 
             view_root = Node("Views")
-            for view in views:
-                if view.Name.lower() in definition:
-                    references_in_def = definition.count(view.Name)
-                    view.TotalReferences += references_in_def
-                    view.ViewInStoredProcedures.append(
+            for view_name in view_report.keys():
+                lowercase_view_name = view_name.lower()
+                if lowercase_view_name in definition:
+                    references_in_def = definition.count(lowercase_view_name)
+                    view_report[view_name].TotalReferences += references_in_def
+                    view_report[view_name].ViewInStoredProcedures.append(
                         ObjectInStoredProcedure(sp_name, references_in_def)
                     )
-                    view_node = copy.deepcopy(all_views[view.Name])
+                    view_node = copy.deepcopy(all_views[view_name])
                     view_root.children += (view_node,)
 
             sp_node.children += (view_root,)
 
             all_stored_procedures[sp_name] = sp_node
-
-    global table_report, view_report, sp_report
-    table_report = tables
-    view_report = views
-    sp_report = stored_procedures
+    print("Tables, Views, Stored Procedure References counted")
 
 
 def createTablesReport(output_dir: str):
@@ -286,9 +290,10 @@ def bottomUpAttachment(parent_name: str):
 def analyzePipelines():
     pipeline_dir = checkEnvironmentVariable("PIPELINE_DIR")
     # Build Tree
+    global pipeline_report
     need_to_complete_pipelines: list[str] = []
-    piplines = os.listdir(pipeline_dir)
-    for pipeline in piplines:
+    pipelines = os.listdir(pipeline_dir)
+    for pipeline in pipelines:
         with open(os.path.join(pipeline_dir, pipeline), "r") as pipeline_file:
             # Read the name and create the node
             pipeline_json = json.load(pipeline_file)

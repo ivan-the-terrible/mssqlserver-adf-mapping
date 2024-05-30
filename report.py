@@ -168,10 +168,14 @@ def countReferences():
 
 
 def createReport(tables: list[Table], views: list[View]):
+    output_dir_name = os.getenv("OUTPUT_DIR")
+    output_dir = os.path.join("reports", output_dir_name)
+    os.makedirs(output_dir, exist_ok=True)
+
     tables.sort(key=lambda x: x.TotalReferences, reverse=True)
     views.sort(key=lambda x: x.TotalReferences, reverse=True)
 
-    with open("reports/table-report.txt", "w") as report_file:
+    with open(os.path.join(output_dir, "table-report.txt"), "w") as report_file:
         for table in tables:
             report_file.write(f"Table: {table.Name}\n")
             report_file.write(f"Total references: {table.TotalReferences}\n")
@@ -183,7 +187,7 @@ def createReport(tables: list[Table], views: list[View]):
                 report_file.write(f"\t{sp.Name}: {sp.Total}\n")
             report_file.write("\n\n")
 
-    with open("reports/view-report.txt", "w") as view_report_file:
+    with open(os.path.join(output_dir, "view-report.txt"), "w") as view_report_file:
         for view in views:
             view_report_file.write(f"View: {view.Name}\n")
             view_report_file.write(f"Total references: {view.TotalReferences}\n")
@@ -311,18 +315,24 @@ def createImages():
         print("MermaidJS not installed or mmdc command not callable. Exiting...")
         return
 
+    output_dir_name = os.getenv("OUTPUT_DIR")
+    output_dir = os.path.join("images", output_dir_name)
+
+    os.makedirs(os.path.join(output_dir, "mermaid"), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "pdf"), exist_ok=True)
+
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = []
         for pipeline_name, pipeline_node in complete_pipelines.items():
             mermaid = MermaidExporter(pipeline_node)
             if debug:
                 mermaid.to_file(
-                    os.path.join("images", "mermaid", f"{pipeline_name}.mmd")
+                    os.path.join(output_dir, "mermaid", f"{pipeline_name}.mmd")
                 )
 
             # call MermaidJS to generate the diagram
             # pipeline_svg = os.path.join("images", "svg", f"{pipeline_name}.svg")
-            pipeline_pdf = os.path.join("images", "pdf", f"{pipeline_name}.pdf")
+            pipeline_pdf = os.path.join(output_dir, "pdf", f"{pipeline_name}.pdf")
             mermaid_text = "\n".join(mermaid)
             future = executor.submit(
                 subprocess.run,

@@ -186,6 +186,7 @@ def countReferences():
 
 
 def createTablesReport(output_dir: str):
+    print("Creating table report")
     table_report.sort(key=lambda x: x.TotalReferences, reverse=True)
     with open(os.path.join(output_dir, "table-report.txt"), "w") as report_file:
         for table in table_report:
@@ -198,9 +199,11 @@ def createTablesReport(output_dir: str):
             for sp in table.TableInStoredProcedures:
                 report_file.write(f"\t{sp.StoredProcedureName}: {sp.Total}\n")
             report_file.write("\n\n")
+    print("Table report created")
 
 
 def createViewsReport(output_dir: str):
+    print("Creating view report")
     view_report.sort(key=lambda x: x.TotalReferences, reverse=True)
     with open(os.path.join(output_dir, "view-report.txt"), "w") as report_file:
         for view in view_report:
@@ -210,6 +213,7 @@ def createViewsReport(output_dir: str):
             for sp in view.ViewInStoredProcedures:
                 report_file.write(f"\t{sp.StoredProcedureName}: {sp.Total}\n")
             report_file.write("\n\n")
+    print("View report created")
 
 
 def createReport():

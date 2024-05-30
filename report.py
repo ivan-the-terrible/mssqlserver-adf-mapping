@@ -7,7 +7,6 @@ import os
 import pprint
 import subprocess
 import time
-from collections import defaultdict
 from dataclasses import dataclass, field
 
 from anytree import Node, Resolver

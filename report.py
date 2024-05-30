@@ -382,6 +382,7 @@ def main():
 
     countReferences()
     if debug:
+        os.makedirs("debug", exist_ok=True)
         with open(os.path.join("debug", "raw-table-result.txt"), "w") as result_file:
             pprint.pp(table_report, result_file)
         with open(os.path.join("debug", "raw-view-result.txt"), "w") as result_file:

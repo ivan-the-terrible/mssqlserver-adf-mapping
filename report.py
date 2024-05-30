@@ -192,9 +192,10 @@ def countReferences():
 
 def createTablesReport(output_dir: str):
     print("Creating table report")
-    table_report.sort(key=lambda x: x.TotalReferences, reverse=True)
+    sorted_tables: list[Table] = list(table_report.values())
+    sorted_tables.sort(key=lambda x: x.TotalReferences, reverse=True)
     with open(os.path.join(output_dir, "table-report.txt"), "w") as report_file:
-        for table in table_report:
+        for table in sorted_tables:
             report_file.write(f"Table: {table.Name}\n")
             report_file.write(f"Total references: {table.TotalReferences}\n")
             report_file.write("Views:\n")
@@ -203,15 +204,19 @@ def createTablesReport(output_dir: str):
             report_file.write("Stored Procedures:\n")
             for sp in table.TableInStoredProcedures:
                 report_file.write(f"\t{sp.StoredProcedureName}: {sp.Total}\n")
+            report_file.write("Pipelines:\n")
+            for pipeline in table.TableInPipelines:
+                report_file.write(f"\t{pipeline.PipelineName}: {pipeline.Total}\n")
             report_file.write("\n\n")
     print("Table report created")
 
 
 def createViewsReport(output_dir: str):
     print("Creating view report")
-    view_report.sort(key=lambda x: x.TotalReferences, reverse=True)
+    sorted_views: list[View] = list(view_report.values())
+    sorted_views.sort(key=lambda x: x.TotalReferences, reverse=True)
     with open(os.path.join(output_dir, "view-report.txt"), "w") as report_file:
-        for view in view_report:
+        for view in sorted_views:
             report_file.write(f"View: {view.Name}\n")
             report_file.write(f"Total references: {view.TotalReferences}\n")
             report_file.write("Stored Procedures:\n")
@@ -223,11 +228,12 @@ def createViewsReport(output_dir: str):
 
 def createStoredProceduresReport(output_dir: str):
     print("Creating stored procedures report")
-    sp_report.sort(key=lambda x: x.TotalReferences, reverse=True)
+    sorted_sp: list[StoredProcedure] = list(sp_report.values())
+    sorted_sp.sort(key=lambda x: x.TotalReferences, reverse=True)
     with open(
         os.path.join(output_dir, "stored-procedures-report.txt"), "w"
     ) as report_file:
-        for sp in sp_report:
+        for sp in sorted_sp:
             report_file.write(f"Stored Procedure: {sp.Name}\n")
             report_file.write(f"Total references: {sp.TotalReferences}\n")
             report_file.write("Pipelines:\n")
@@ -290,7 +296,7 @@ def bottomUpAttachment(parent_name: str):
 def analyzePipelines():
     pipeline_dir = checkEnvironmentVariable("PIPELINE_DIR")
     # Build Tree
-    global pipeline_report
+    global pipeline_report, table_report, sp_report
     need_to_complete_pipelines: list[str] = []
     pipelines = os.listdir(pipeline_dir)
     for pipeline in pipelines:
@@ -298,6 +304,8 @@ def analyzePipelines():
             # Read the name and create the node
             pipeline_json = json.load(pipeline_file)
             pipeline_name = pipeline_json["name"]
+
+            pipeline_report[pipeline_name] = Pipeline(pipeline_name)
 
             table_root = Node("Tables")
             sp_root = Node("Stored Procedures")
@@ -330,8 +338,17 @@ def analyzePipelines():
                             if stored_procedure is None:
                                 bad_sp_root.children += (Node(stored_procedure_name),)
                             else:
+                                # tree
                                 sp_node: Node = copy.deepcopy(stored_procedure)
                                 sp_root.children += (sp_node,)
+                                # reporting
+                                sp_report[stored_procedure_name].TotalReferences += 1
+                                sp_report[
+                                    stored_procedure_name
+                                ].StoredProcedureInPipelines.append(
+                                    ObjectInPipeline(pipeline_name)
+                                )
+
                     case "Lookup":
                         # Some tables are hardcoded
                         match activity["typeProperties"]["dataset"]["referenceName"]:
@@ -349,13 +366,25 @@ def analyzePipelines():
                         if table is None:
                             bad_table_root.children += (Node(table_name),)
                         else:
+                            # tree
                             table_node: Node = copy.deepcopy(table)
                             table_root.children += (table_node,)
+                            # reporting
+                            table_report[table_name].TotalReferences += 1
+                            table_report[table_name].TableInPipelines.append(
+                                ObjectInPipeline(pipeline_name)
+                            )
+
                     case "ExecutePipeline":  # the pipeline runs another pipeline
                         dependent_pipeline_name: str = activity["typeProperties"][
                             "pipeline"
                         ]["referenceName"]
                         dependent_pipelines.append(dependent_pipeline_name)
+                        # reporting
+                        pipeline_report[pipeline_name].Total += 1
+                        pipeline_report[pipeline_name].PipelineInPipelines.append(
+                            ObjectInPipeline(dependent_pipeline_name)
+                        )
 
             bad_root = Node("Nonexistent")
             bad_root.children += (bad_table_root, bad_sp_root, bad_dp_root)

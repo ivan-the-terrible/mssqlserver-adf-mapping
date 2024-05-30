@@ -30,36 +30,50 @@ class MermaidExporter(MermaidExporter):
 
 
 @dataclass
-class TableInView:
+class ObjectInView:
     ViewName: str
+    Total: int = 0
+
+
+@dataclass
+class ObjectInStoredProcedure:
+    StoredProcedureName: str
+    Total: int = 0
+
+
+@dataclass
+class ObjectInPipeline:
+    PipelineName: str
     Total: int = 0
 
 
 @dataclass
 class Pipeline:
     Name: str
+    PipelineInPipelines: list[ObjectInPipeline] = field(default_factory=list)
+    Total: int = 0
 
 
 @dataclass
 class StoredProcedure:
     Name: str
-    Pipelines: list[Pipeline] = field(default_factory=list)
+    StoredProcedureInPipelines: list[ObjectInPipeline] = field(default_factory=list)
     Total: int = 0
 
 
 @dataclass
 class Table:
     Name: str
-    Views: list[TableInView] = field(default_factory=list)
-    StoredProcedures: list[StoredProcedure] = field(default_factory=list)
-    Pipelines: list[Pipeline] = field(default_factory=list)
+    TableInViews: list[ObjectInView] = field(default_factory=list)
+    TableInStoredProcedures: list[ObjectInStoredProcedure] = field(default_factory=list)
+    TableInPipelines: list[ObjectInPipeline] = field(default_factory=list)
     TotalReferences: int = 0
 
 
 @dataclass
 class View:
     Name: str
-    StoredProcedures: list[StoredProcedure] = field(default_factory=list)
+    ViewInStoredProcedures: list[ObjectInStoredProcedure] = field(default_factory=list)
     TotalReferences: int = 0
 
 
@@ -121,7 +135,7 @@ def countReferences():
                 if table.Name.lower() in definition:
                     references_in_def = definition.count(table.Name)
                     table.TotalReferences += references_in_def
-                    table.Views.append(TableInView(row[0], references_in_def))
+                    table.TableInViews.append(ObjectInView(row[0], references_in_def))
 
                     table_root.children += (Node(table.Name),)
 
@@ -142,7 +156,7 @@ def countReferences():
                 if table.Name.lower() in definition:
                     references_in_def = definition.count(table.Name)
                     table.TotalReferences += references_in_def
-                    table.StoredProcedures.append(
+                    table.TableInStoredProcedures.append(
                         StoredProcedure(sp_name, references_in_def)
                     )
 
@@ -155,7 +169,7 @@ def countReferences():
                 if view.Name.lower() in definition:
                     references_in_def = definition.count(view.Name)
                     view.TotalReferences += references_in_def
-                    view.StoredProcedures.append(
+                    view.ViewInStoredProcedures.append(
                         StoredProcedure(sp_name, references_in_def)
                     )
                     view_node = copy.deepcopy(all_views[view.Name])
@@ -184,10 +198,10 @@ def createReport(tables: list[Table], views: list[View]):
             report_file.write(f"Table: {table.Name}\n")
             report_file.write(f"Total references: {table.TotalReferences}\n")
             report_file.write("Views:\n")
-            for view in table.Views:
+            for view in table.TableInViews:
                 report_file.write(f"\t{view.ViewName}: {view.Total}\n")
             report_file.write("Stored Procedures:\n")
-            for sp in table.StoredProcedures:
+            for sp in table.TableInStoredProcedures:
                 report_file.write(f"\t{sp.Name}: {sp.Total}\n")
             report_file.write("\n\n")
 
@@ -196,7 +210,7 @@ def createReport(tables: list[Table], views: list[View]):
             view_report_file.write(f"View: {view.Name}\n")
             view_report_file.write(f"Total references: {view.TotalReferences}\n")
             view_report_file.write("Stored Procedures:\n")
-            for sp in view.StoredProcedures:
+            for sp in view.ViewInStoredProcedures:
                 view_report_file.write(f"\t{sp.Name}: {sp.Total}\n")
             view_report_file.write("\n\n")
 

@@ -99,7 +99,7 @@ debug = False
 
 
 def checkDirectory(dir_path: str) -> str:
-    if not os.path.exists(dir_path) | os.path.isdir(dir_path):
+    if not os.path.exists(dir_path) or not os.path.isdir(dir_path):
         print(f"{dir_path} does not exist or isn't directory")
         exit(1)
     return dir_path
@@ -336,8 +336,8 @@ def analyzePipelines():
                         parsed_sp_name = activity["typeProperties"][
                             "storedProcedureName"
                         ]
-                        if (
-                            type(parsed_sp_name) is str
+                        if isinstance(
+                            parsed_sp_name, str
                         ):  # there is a case where this is a Dict like in TPO_dimProductCanada where the dict is a value of @activity('Get metadata')
                             stored_procedure_name: str = (
                                 activity["typeProperties"]["storedProcedureName"]

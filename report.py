@@ -251,7 +251,7 @@ def createPipelinesReport(output_dir: str):
         for pipeline in sorted_pipelines:
             report_file.write(f"Pipeline: {pipeline.Name}\n")
             report_file.write(f"Total references: {pipeline.Total}\n")
-            report_file.write("Pipelines:\n")
+            report_file.write("Dependent Pipelines:\n")
             for pipeline in pipeline.PipelineInPipelines:
                 report_file.write(f"\t{pipeline.PipelineName}: {pipeline.Total}\n")
             report_file.write("\n\n")

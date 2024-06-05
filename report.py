@@ -295,6 +295,97 @@ def bottomUpAttachment(parent_name: str):
             return complete_pipelines[parent_name]
 
 
+def process_activities(
+    activities: list,
+    table_root: Node,
+    sp_root: Node,
+    dp_root: Node,
+    bad_table_root: Node,
+    bad_sp_root: Node,
+    bad_dp_root: Node,
+    dependent_pipelines: list,
+    total_references: dict[str, dict[str, int]],
+):
+    for activity in activities:
+        match activity["type"]:
+            case "SqlServerStoredProcedure":
+                parsed_sp_name = activity["typeProperties"]["storedProcedureName"]
+                if isinstance(parsed_sp_name, str):
+                    stored_procedure_name: str = (
+                        activity["typeProperties"]["storedProcedureName"]
+                        .replace("[", "")
+                        .replace("]", "")
+                    )
+                    stored_procedure: Node | None = all_stored_procedures.get(
+                        stored_procedure_name
+                    )
+                    if stored_procedure is None:
+                        bad_sp_root.children += (Node(stored_procedure_name),)
+                    else:
+                        # tree
+                        sp_node: Node = copy.deepcopy(stored_procedure)
+                        sp_root.children += (sp_node,)
+                        # reporting
+                        ref_count = total_references["sp"].get(stored_procedure_name)
+                        ref_count = 1 if ref_count is None else ref_count + 1
+                        total_references["sp"][stored_procedure_name] = ref_count
+
+            case "Lookup":
+                # sqlReaderQuery can sometimes be a dict or a string
+                if "AzureSqlSource" in activity["typeProperties"]["source"]["type"]:
+                    sqlReaderQuery_prop = activity["typeProperties"]["source"][
+                        "sqlReaderQuery"
+                    ]
+                    if isinstance(sqlReaderQuery_prop, str):
+                        definition = sqlReaderQuery_prop
+                    else:
+                        definition: str | None = sqlReaderQuery_prop["value"]
+                    if definition is not None:
+                        query = definition.replace("[", "").replace("]", "").lower()
+
+                        for table in table_report.keys():
+                            lowercase_table_name = table.lower()
+                            if lowercase_table_name in query:
+                                # reporting
+                                ref_count = total_references["table"].get(table)
+                                ref_count = 1 if ref_count is None else ref_count + 1
+                                total_references["table"][table] = ref_count
+                                # tree
+                                table_node: Node = copy.deepcopy(all_tables[table])
+                                table_root.children += (table_node,)
+
+            case "ExecutePipeline":  # the pipeline runs another pipeline
+                dependent_pipeline_name: str = activity["typeProperties"]["pipeline"][
+                    "referenceName"
+                ]
+                dependent_pipelines.append(dependent_pipeline_name)
+                # reporting
+                ref_count = total_references["dp"].get(dependent_pipeline_name)
+                ref_count = 1 if ref_count is None else ref_count + 1
+                total_references["dp"][dependent_pipeline_name] = ref_count
+
+            case "IfCondition":
+                conditional_activities = []
+                true_activities = activity["typeProperties"].get("ifTrueActivities", [])
+                false_activities = activity["typeProperties"].get(
+                    "ifFalseActivities", []
+                )
+                conditional_activities += true_activities
+                conditional_activities += false_activities
+                if len(conditional_activities) > 0:
+                    process_activities(
+                        conditional_activities,
+                        table_root,
+                        sp_root,
+                        dp_root,
+                        bad_table_root,
+                        bad_sp_root,
+                        bad_dp_root,
+                        dependent_pipelines,
+                        total_references,
+                    )
+
+
 def analyzePipelines():
     pipeline_dir = checkEnvironmentVariable("PIPELINE_DIR")
     # Build Tree
@@ -331,81 +422,17 @@ def analyzePipelines():
             # ex. {sp: {sp_name: 2, sp_name2: 1}, table: {table_name: 1}, dp: {dp_name: 1}
 
             # loop through Activities
-            for activity in activities:
-                match activity["type"]:
-                    case "SqlServerStoredProcedure":
-                        parsed_sp_name = activity["typeProperties"][
-                            "storedProcedureName"
-                        ]
-                        if isinstance(
-                            parsed_sp_name, str
-                        ):  # there is a case where this is a Dict like in TPO_dimProductCanada where the dict is a value of @activity('Get metadata')
-                            stored_procedure_name: str = (
-                                activity["typeProperties"]["storedProcedureName"]
-                                .replace("[", "")
-                                .replace("]", "")
-                            )
-                            stored_procedure: Node | None = all_stored_procedures.get(
-                                stored_procedure_name
-                            )
-                            if stored_procedure is None:
-                                bad_sp_root.children += (Node(stored_procedure_name),)
-                            else:
-                                # tree
-                                sp_node: Node = copy.deepcopy(stored_procedure)
-                                sp_root.children += (sp_node,)
-                                # reporting
-                                ref_count = total_references["sp"].get(
-                                    stored_procedure_name
-                                )
-                                ref_count = 1 if ref_count is None else ref_count + 1
-                                total_references["sp"][
-                                    stored_procedure_name
-                                ] = ref_count
-
-                    case "Lookup":
-                        # sqlReaderQuery can sometimes be a dict or a string
-                        if (
-                            "AzureSqlSource"
-                            in activity["typeProperties"]["source"]["type"]
-                        ):
-                            sqlReaderQuery_prop = activity["typeProperties"]["source"][
-                                "sqlReaderQuery"
-                            ]
-                            if isinstance(sqlReaderQuery_prop, str):
-                                definition = sqlReaderQuery_prop
-                            else:
-                                definition: str | None = sqlReaderQuery_prop["value"]
-                            if definition is not None:
-                                query = (
-                                    definition.replace("[", "").replace("]", "").lower()
-                                )
-
-                                for table in table_report.keys():
-                                    lowercase_table_name = table.lower()
-                                    if lowercase_table_name in query:
-                                        # reporting
-                                        ref_count = total_references["table"].get(table)
-                                        ref_count = (
-                                            1 if ref_count is None else ref_count + 1
-                                        )
-                                        total_references["table"][table] = ref_count
-                                        # tree
-                                        table_node: Node = copy.deepcopy(
-                                            all_tables[table]
-                                        )
-                                        table_root.children += (table_node,)
-
-                    case "ExecutePipeline":  # the pipeline runs another pipeline
-                        dependent_pipeline_name: str = activity["typeProperties"][
-                            "pipeline"
-                        ]["referenceName"]
-                        dependent_pipelines.append(dependent_pipeline_name)
-                        # reporting
-                        ref_count = total_references["dp"].get(dependent_pipeline_name)
-                        ref_count = 1 if ref_count is None else ref_count + 1
-                        total_references["dp"][dependent_pipeline_name] = ref_count
-
+            process_activities(
+                activities,
+                table_root,
+                sp_root,
+                dp_root,
+                bad_table_root,
+                bad_sp_root,
+                bad_dp_root,
+                dependent_pipelines,
+                total_references,
+            )
             # reporting
             for ref_type, ref_dict in total_references.items():
                 for ref_name, ref_count in ref_dict.items():

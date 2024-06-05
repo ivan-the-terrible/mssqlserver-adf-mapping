@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass, field
 
 from anytree import Node, Resolver
-from anytree.exporter import MermaidExporter
+from anytree.exporter import JsonExporter, MermaidExporter
 from dotenv import load_dotenv
 
 
@@ -445,7 +445,13 @@ def analyzePipelines():
         bottomUpAttachment(pipeline_name)
 
 
-def createImages():
+def saveJSON(exporter: JsonExporter, node: Node, filename: str):
+    print("Saving JSON to ", filename)
+    with open(filename, "w") as file:
+        exporter.write(node, file)
+
+
+def exportImagesAndTreeStructures():
     # Ensure MermaidJS is installed
     has_mermaidJS = os.system("mmdc --version") == 0  # check exit status
     if not has_mermaidJS:
@@ -457,21 +463,25 @@ def createImages():
 
     os.makedirs(os.path.join(output_dir, "mermaid"), exist_ok=True)
     os.makedirs(os.path.join(output_dir, "pdf"), exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "json"), exist_ok=True)
+
+    json_exporter = JsonExporter(indent=2)
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = []
         for pipeline_name, pipeline_node in complete_pipelines.items():
             mermaid = MermaidExporter(pipeline_node)
             if debug:
-                mermaid.to_file(
-                    os.path.join(output_dir, "mermaid", f"{pipeline_name}.mmd")
+                pipeline_mermaid_file = os.path.join(
+                    output_dir, "mermaid", f"{pipeline_name}.mmd"
                 )
+                futures.append(mermaid.to_file, pipeline_mermaid_file)
 
             # call MermaidJS to generate the diagram
             # pipeline_svg = os.path.join("images", "svg", f"{pipeline_name}.svg")
             pipeline_pdf = os.path.join(output_dir, "pdf", f"{pipeline_name}.pdf")
             mermaid_text = "\n".join(mermaid)
-            future = executor.submit(
+            future_pdf = executor.submit(
                 subprocess.run,
                 [
                     "mmdc",
@@ -485,7 +495,15 @@ def createImages():
                 input=mermaid_text.encode(),
                 shell=True,
             )
-            futures.append(future)
+            futures.append(future_pdf)
+
+            pipeline_json_file = os.path.join(
+                output_dir, "json", f"{pipeline_name}.json"
+            )
+            future_json = executor.submit(
+                saveJSON, json_exporter, pipeline_node, pipeline_json_file
+            )
+            futures.append(future_json)
 
         # Wait for all tasks to complete
         concurrent.futures.wait(futures)
@@ -510,7 +528,7 @@ def main():
     analyzePipelines()
 
     createReport()
-    createImages()
+    exportImagesAndTreeStructures()
     print("DONE")
     elapsed_time = time.time() - start_time
     print("Execution time:", elapsed_time, "\n")

@@ -115,6 +115,7 @@ def checkEnvironmentVariable(env_var: str) -> str:
 
 def countReferences():
     mssqlserver_dir = os.getenv("MSSQL_SERVER_DATA_DIR")
+    os.makedirs("data", exist_ok=True)
     path_prefix = checkDirectory(os.path.join("data", mssqlserver_dir))
 
     global table_report, view_report, sp_report

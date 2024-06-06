@@ -9,3 +9,7 @@ debug/*
 reports/*
 
 .env
+
+Scripts/
+Lib
+pyvenv.cfg

@@ -474,18 +474,18 @@ def analyzePipelines():
 
 
 def saveJSON(exporter: JsonExporter, node: Node, filename: str):
-    print("Saving JSON to ", filename)
+    print("Saving JSON to", filename)
     with open(filename, "w") as file:
         exporter.write(node, file)
 
 
 def saveMermaid(mermaid: MermaidExporter, filename: str):
-    print("Saving Mermaid to ", filename)
+    print("Saving Mermaid to", filename)
     mermaid.to_file(filename)
 
 
 def savePDF(mermaid_text: str, pipeline_pdf: str):
-    print("Saving PDF to ", pipeline_pdf)
+    print("Saving PDF to", pipeline_pdf)
     subprocess.run(
         [
             "mmdc",
@@ -497,8 +497,7 @@ def savePDF(mermaid_text: str, pipeline_pdf: str):
             "mermaid-config.json",
             "&&",
             "echo",
-            pipeline_pdf,
-            " created successfully",
+            f"{pipeline_pdf} created successfully",
         ],
         input=mermaid_text.encode(),
         shell=True,

@@ -479,6 +479,32 @@ def saveJSON(exporter: JsonExporter, node: Node, filename: str):
         exporter.write(node, file)
 
 
+def saveMermaid(mermaid: MermaidExporter, filename: str):
+    print("Saving Mermaid to ", filename)
+    mermaid.to_file(filename)
+
+
+def savePDF(mermaid_text: str, pipeline_pdf: str):
+    print("Saving PDF to ", pipeline_pdf)
+    subprocess.run(
+        [
+            "mmdc",
+            "--input",
+            "-",
+            "--output",
+            pipeline_pdf,
+            "--configFile",
+            "mermaid-config.json",
+            "&&",
+            "echo",
+            pipeline_pdf,
+            " created successfully",
+        ],
+        input=mermaid_text.encode(),
+        shell=True,
+    )
+
+
 def exportImagesAndTreeStructures():
     # Ensure MermaidJS is installed
     has_mermaidJS = os.system("mmdc --version") == 0  # check exit status
@@ -503,26 +529,16 @@ def exportImagesAndTreeStructures():
                 pipeline_mermaid_file = os.path.join(
                     output_dir, "mermaid", f"{pipeline_name}.mmd"
                 )
-                futures.append(mermaid.to_file, pipeline_mermaid_file)
+                future_mermaid = executor.submit(
+                    saveMermaid, mermaid, pipeline_mermaid_file
+                )
+                futures.append(future_mermaid)
 
             # call MermaidJS to generate the diagram
             # pipeline_svg = os.path.join("images", "svg", f"{pipeline_name}.svg")
             pipeline_pdf = os.path.join(output_dir, "pdf", f"{pipeline_name}.pdf")
             mermaid_text = "\n".join(mermaid)
-            future_pdf = executor.submit(
-                subprocess.run,
-                [
-                    "mmdc",
-                    "--input",
-                    "-",
-                    "--output",
-                    pipeline_pdf,
-                    "--configFile",
-                    "mermaid-config.json",
-                ],
-                input=mermaid_text.encode(),
-                shell=True,
-            )
+            future_pdf = executor.submit(savePDF, mermaid_text, pipeline_pdf)
             futures.append(future_pdf)
 
             pipeline_json_file = os.path.join(

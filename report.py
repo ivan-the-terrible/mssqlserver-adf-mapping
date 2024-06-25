@@ -307,13 +307,19 @@ def process_activities(
     dependent_pipelines: list,
     total_references: dict[str, dict[str, int]],
 ):
+    is_ADF_schema = "typeProperties" in activities[0]  # ADF has typeProperties
     for activity in activities:
+        if is_ADF_schema:
+            activity_details = activity["typeProperties"]
+        else:
+            activity_details = activity  # we need to bypass the typeProperties
+
         match activity["type"]:
             case "SqlServerStoredProcedure":
-                parsed_sp_name = activity["typeProperties"]["storedProcedureName"]
+                parsed_sp_name = activity_details["storedProcedureName"]
                 if isinstance(parsed_sp_name, str):
                     stored_procedure_name: str = (
-                        activity["typeProperties"]["storedProcedureName"]
+                        activity_details["storedProcedureName"]
                         .replace("[", "")
                         .replace("]", "")
                     )
@@ -333,10 +339,8 @@ def process_activities(
 
             case "Lookup":
                 # sqlReaderQuery can sometimes be a dict or a string
-                if "AzureSqlSource" in activity["typeProperties"]["source"]["type"]:
-                    sqlReaderQuery_prop = activity["typeProperties"]["source"][
-                        "sqlReaderQuery"
-                    ]
+                if "AzureSqlSource" in activity_details["source"]["type"]:
+                    sqlReaderQuery_prop = activity_details["source"]["sqlReaderQuery"]
                     if isinstance(sqlReaderQuery_prop, str):
                         definition = sqlReaderQuery_prop
                     else:
@@ -356,7 +360,7 @@ def process_activities(
                                 table_root.children += (table_node,)
 
             case "ExecutePipeline":  # the pipeline runs another pipeline
-                dependent_pipeline_name: str = activity["typeProperties"]["pipeline"][
+                dependent_pipeline_name: str = activity_details["pipeline"][
                     "referenceName"
                 ]
                 dependent_pipelines.append(dependent_pipeline_name)
@@ -367,10 +371,12 @@ def process_activities(
 
             case "IfCondition":
                 conditional_activities = []
-                true_activities = activity["typeProperties"].get("ifTrueActivities", [])
-                false_activities = activity["typeProperties"].get(
-                    "ifFalseActivities", []
-                )
+                true_activities = activity_details.get("ifTrueActivities", [])
+                if true_activities is None:
+                    true_activities = []
+                false_activities = activity_details.get("ifFalseActivities", [])
+                if false_activities is None:
+                    false_activities = []
                 conditional_activities += true_activities
                 conditional_activities += false_activities
                 if len(conditional_activities) > 0:
@@ -387,16 +393,67 @@ def process_activities(
                     )
 
 
+def fetchADFPipelines(pipeline_dir: str):
+    print("Fetching ADF Pipelines")
+    has_azCLI = os.system("az --version") == 0  # check exit status
+    if not has_azCLI:
+        print("Azure CLI not installed or az command not callable. Exiting...")
+        return
+
+    adf_factory_name = os.getenv("ADF_FACTORY_NAME")
+    adf_resource_group = os.getenv("ADF_RESOURCE_GROUP")
+    adf_subscription = os.getenv("ADF_SUBSCRIPTION")
+    if (
+        adf_factory_name is None
+        or adf_resource_group is None
+        or adf_subscription is None
+    ):
+        print("ADF_FACTORY_NAME, ADF_RESOURCE_GROUP, or ADF_SUBSCRIPTION not set")
+        exit(1)
+
+    pipelines_json = subprocess.run(
+        [
+            "az",
+            "datafactory",
+            "pipeline",
+            "list",
+            "--factory-name",
+            adf_factory_name,
+            "--resource-group",
+            adf_resource_group,
+            "--subscription",
+            adf_subscription,
+            "--output",
+            "json",
+        ],
+        capture_output=True,
+        check=True,
+        shell=True,
+        text=True,
+    ).stdout
+    pipelines = json.loads(pipelines_json)
+    for pipeline in pipelines:
+        pipeline_name = pipeline["name"]
+        pipeline_json = json.dumps(pipeline, indent=2)
+        with open(
+            os.path.join(pipeline_dir, f"{pipeline_name}.json"), "w"
+        ) as pipeline_file:
+            pipeline_file.write(pipeline_json)
+
+
 def analyzePipelines():
     pipeline_dir = checkEnvironmentVariable("PIPELINE_DIR")
     # Build Tree
     global pipeline_report, table_report, sp_report
     need_to_complete_pipelines: list[str] = []
     pipelines = os.listdir(pipeline_dir)
+    if len(pipelines) == 0:
+        fetchADFPipelines(pipeline_dir)
+
     for pipeline in pipelines:
         with open(os.path.join(pipeline_dir, pipeline), "r") as pipeline_file:
             # Read the name and create the node
-            pipeline_json = json.load(pipeline_file)
+            pipeline_json: dict = json.load(pipeline_file)
             pipeline_name = pipeline_json["name"]
 
             pipeline_report[pipeline_name] = Pipeline(pipeline_name)
@@ -409,8 +466,13 @@ def analyzePipelines():
             bad_sp_root = Node("Stored Procedures")
             bad_dp_root = Node("Dependent Pipelines")
 
-            # check for Stored Procedures, Table lookups, and dependent pipelines
-            activities: list = pipeline_json["properties"]["activities"]
+            # The schema is different from pipeline JSON from ADF and Azure CLI
+
+            if pipeline_json.get("properties") is None:
+                activities = pipeline_json["activities"]  # Azure CLI schema
+            else:
+                activities = pipeline_json["properties"]["activities"]  # ADF Schema
+
             dependent_pipelines: list = []
 
             # reporting counts

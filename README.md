@@ -47,7 +47,7 @@ The subdirectories within them are named after values within your `.env`.
 
 ## Requirements
 
-The below will require Python and NodeJS.
+The below will require Python, NodeJS, but optionally Azure CLI.
 (Last used with Python 3.12.3 and Node 22.2.0)
 
 You can use the `install.ps1` script, which will install a Python Virtual Environment and the Mermaid CLI npm package.
@@ -57,6 +57,17 @@ Other than activating the environment, these commands are OS agnostic as well.
 - `npm install -g @mermaid-js/mermaid-cli`
 
 Mermaid CLI repo: <https://github.com/mermaid-js/mermaid-cli>
+Azure CLI: <https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-windows?tabs=azure-cli>
+
+Azure CLI is required to fetch all the JSON files of the Azure Data Factory pipelines IF you do not have access to the source controlled list of pipelines.
+If you're using/configuring the Azure CLI, you'll basically want to `az login` in the terminal and head to portal.azure.com to view whatever Data Factory you'd like to analyze.
+You'll need to grab the factory name, resource group, and subscription values and add them to the `.env`, as mentioned in the below section.
+
+Again, it is expected that the user create the `data` directory here where the script lives and another within that is then set to the `MSSQL_SERVER_DATA_DIR` env value. This subdirectory contains the CSVs saved output from `queries.sql`. Please use those queries, select all, and copy.
+
+- Tables.csv        -> just Copy
+- View.csv          -> Copy with Headers
+- Stored Procedures -> Copy with Headers
 
 Invoking the script is as easy as `python report.py`.
 
@@ -70,5 +81,11 @@ Typically ADF's version control has the name of the repo and then a directory ca
 - `MSSQL_SERVER_DATA_DIR` is the name of the folder that exists within the `data` directory that contains Tables.csv, Views.csv, and StoredProcedures.csv. The user is expected to create this folder and copy the name to this env value.
 
 - `OUTPUT_DIR` is the name of the folder that exists within the `images` and also the `reports` directory that will be generated to contain images and reports.
+
+- `ADF_FACTORY_NAME` is the Azure Data Factory name.
+
+- `ADF_RESOURCE_GROUP` is the Azure Data Factory resource group.
+
+- `ADF_SUBSCRIPTION` is the Azure Data Factory subscription.
 
 - If you need to create extra output, set `DEBUG="True"` and a `debug` directory will be made with raw class values. See also the raw Mermaid output within the `images` directory as mentioned above.

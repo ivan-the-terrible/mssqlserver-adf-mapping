@@ -1,0 +1,2 @@
+(No column name)	definition
+dbo.View_Test_Table	CREATE VIEW [dbo].[View_Test_Table] AS SELECT * FROM dbo.Test_Table LEFT JOIN dbo.Test_Table_2 ON dbo.Test_Table.id = dbo.Test_Table_2.id LEFT JOIN dbo.BAD_REF ON dbo.Test_Table.id = dbo.BAD_REF.id UNION SELECT * FROM dbo.Test_Table_3

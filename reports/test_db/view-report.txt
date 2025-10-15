@@ -1,0 +1,11 @@
+View: dbo.view_test_table
+Total references: 1
+Stored Procedures:
+	dbo.Test_StoredProcedure: 1
+
+
+View: (no column name)
+Total references: 0
+Stored Procedures:
+
+

@@ -1,12 +1,14 @@
-!images/
-!data/
-!debug/
-!reports/
+/data/*
+/debug/*
+/reports/*
+/images/*
 
-images/*
-data/*
-debug/*
-reports/*
+!/data/ADF_example
+!/data/MSSQL_example
+!/debug/raw-view-result.txt
+!/images/test_db
+!/reports/test_db
 
 .env
 venv/
+.python-version

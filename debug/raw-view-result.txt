@@ -1,0 +1,7 @@
+{'(no column name)': View(Name='(no column name)',
+                          ViewInStoredProcedures=[],
+                          TotalReferences=0),
+ 'dbo.view_test_table': View(Name='dbo.view_test_table',
+                             ViewInStoredProcedures=[ObjectInStoredProcedure(StoredProcedureName='dbo.Test_StoredProcedure',
+                                                                             Total=1)],
+                             TotalReferences=1)}

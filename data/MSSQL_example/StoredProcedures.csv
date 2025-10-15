@@ -1,0 +1,2 @@
+(No column name)	definition
+dbo.Test_StoredProcedure	CREATE PROCEDURE dbo.Test_StoredProcedure AS BEGIN SELECT * FROM dbo.View_Test_Table END

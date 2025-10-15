@@ -1,0 +1,26 @@
+Table: dbo.Test_Table
+Total references: 7
+Views:
+	dbo.view_test_table: 6
+Stored Procedures:
+Pipelines:
+	Test_Pipeline: 1
+
+
+Table: dbo.Test_Table_2
+Total references: 2
+Views:
+	dbo.view_test_table: 2
+Stored Procedures:
+Pipelines:
+
+
+Table: dbo.Test_Table_3
+Total references: 2
+Views:
+	dbo.view_test_table: 1
+Stored Procedures:
+Pipelines:
+	Test_Pipeline: 1
+
+

@@ -76,7 +76,7 @@ Invoking the script is as easy as `python report.py`.
 Create an `.env` file with the following:
 
 - `PIPELINE_DIR` needs to be set to the directory of whatever ADF pipelines you'd like to parse.
-Typically ADF's version control has the name of the repo and then a directory called pipeline.
+Typically ADF's version control has the name of the repo and then a directory called pipeline. This directory is used to list all the JSON files within, so whatever you specify as the directory just ensure the JSON files are within it.
 
 - `MSSQL_SERVER_DATA_DIR` is the name of the folder that exists within the `data` directory that contains Tables.csv, Views.csv, and StoredProcedures.csv. The user is expected to create this folder and copy the name to this env value.
 

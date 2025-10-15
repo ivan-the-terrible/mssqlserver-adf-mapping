@@ -1,0 +1,138 @@
+{
+  "activities": [
+    {
+      "additionalProperties": null,
+      "dataset": {
+        "parameters": null,
+        "referenceName": "Reference_Table",
+        "type": "DatasetReference"
+      },
+      "dependsOn": [],
+      "description": null,
+      "firstRowOnly": null,
+      "linkedServiceName": null,
+      "name": "Get metadata",
+      "onInactiveMarkAs": null,
+      "policy": {
+        "additionalProperties": null,
+        "retry": 0,
+        "retryIntervalInSeconds": 30,
+        "secureInput": false,
+        "secureOutput": false,
+        "timeout": "7.00:00:00"
+      },
+      "source": {
+        "additionalColumns": null,
+        "additionalProperties": null,
+        "disableMetricsCollection": null,
+        "isolationLevel": null,
+        "maxConcurrentConnections": null,
+        "partitionOption": "None",
+        "partitionSettings": null,
+        "produceAdditionalTypes": null,
+        "queryTimeout": null,
+        "sourceRetryCount": null,
+        "sourceRetryWait": null,
+        "sqlReaderQuery": {
+          "type": "Expression",
+          "value": "@concat('SELECT *  FROM [dbo].[View_Test_Table] \n  left join dbo.Test_Table_3 t on [dbo].[Test_Table].ID = t.ID\n  left join dbo.Test_Table_3 c on c.id = r.id\n  where t.name = ''env'' and\n  [dbo].[BAD_REF].[NO_COLMN] = ', '''',pipeline().parameters.ProcName,'''')"
+        },
+        "sqlReaderStoredProcedureName": null,
+        "storedProcedureParameters": null,
+        "type": "AzureSqlSource"
+      },
+      "state": null,
+      "type": "Lookup",
+      "userProperties": []
+    },
+    {
+      "additionalProperties": null,
+      "dependsOn": [
+        {
+          "activity": "Get metadata",
+          "additionalProperties": null,
+          "dependencyConditions": ["Succeeded"]
+        }
+      ],
+      "description": null,
+      "linkedServiceName": {
+        "parameters": null,
+        "referenceName": "test_db",
+        "type": "LinkedServiceReference"
+      },
+      "name": "LogStart",
+      "onInactiveMarkAs": null,
+      "policy": {
+        "additionalProperties": null,
+        "retry": 0,
+        "retryIntervalInSeconds": 30,
+        "secureInput": false,
+        "secureOutput": false,
+        "timeout": "7.00:00:00"
+      },
+      "state": null,
+      "storedProcedureName": "[dbo].[Test_StoredProcedure]",
+      "storedProcedureParameters": {
+        "FILE": {
+          "type": "String",
+          "value": {
+            "type": "Expression",
+            "value": "@pipeline().parameters.ProcName"
+          }
+        },
+        "RAW_TBL_NAME": {
+          "type": "String",
+          "value": null
+        },
+        "STEP": {
+          "type": "String",
+          "value": "ADF_START"
+        }
+      },
+      "type": "SqlServerStoredProcedure",
+      "userProperties": []
+    }
+  ],
+  "additionalProperties": null,
+  "annotations": [],
+  "concurrency": null,
+  "description": null,
+  "etag": "00000000-0000-0000-0000-000000000000",
+  "folder": {
+    "name": "Test"
+  },
+  "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/your_adf_resource_group/providers/Microsoft.DataFactory/factories/your_adf/pipelines/Test_Pipeline",
+  "name": "Test_Pipeline",
+  "parameters": {
+    "ProcName": {
+      "defaultValue": "Test_Pipeline",
+      "type": "string"
+    }
+  },
+  "policy": null,
+  "resourceGroup": "your_adf_resource_group",
+  "runDimensions": null,
+  "type": "Microsoft.DataFactory/factories/pipelines",
+  "variables": {
+    "access_token": {
+      "defaultValue": null,
+      "type": "String"
+    },
+    "client_id": {
+      "defaultValue": "00000000-0000-0000-0000-000000000000",
+      "type": "String"
+    },
+    "client_secret": {
+      "defaultValue": null,
+      "type": "String"
+    },
+    "nested_groups_count": {
+      "defaultValue": null,
+      "type": "String"
+    },
+    "tenant_id": {
+      "defaultValue": "00000000-0000-0000-0000-000000000000",
+      "type": "String"
+    }
+  }
+}

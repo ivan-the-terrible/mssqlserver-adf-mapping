@@ -1,0 +1,36 @@
+graph TD
+N0["Test_Pipeline"]
+N1["Tables"]
+N2["dbo.Test_Table"]
+N3["dbo.Test_Table_3"]
+N4["Stored Procedures"]
+N5["dbo.Test_StoredProcedure"]
+N6["Tables"]
+N7["Views"]
+N8["dbo.view_test_table"]
+N9["Tables"]
+N10["dbo.Test_Table"]
+N11["dbo.Test_Table_2"]
+N12["dbo.Test_Table_3"]
+N13["Dependent Pipelines"]
+N14["Nonexistent"]
+N15["Tables"]
+N16["Stored Procedures"]
+N17["Dependent Pipelines"]
+N0-->N1
+N0-->N4
+N0-->N13
+N0-->N14
+N1-->N2
+N1-->N3
+N4-->N5
+N5-->N6
+N5-->N7
+N7-->N8
+N8-->N9
+N9-->N10
+N9-->N11
+N9-->N12
+N14-->N15
+N14-->N16
+N14-->N17

@@ -1,0 +1,70 @@
+{
+  "name": "Test_Pipeline",
+  "children": [
+    {
+      "name": "Tables",
+      "children": [
+        {
+          "name": "dbo.Test_Table"
+        },
+        {
+          "name": "dbo.Test_Table_3"
+        }
+      ]
+    },
+    {
+      "name": "Stored Procedures",
+      "children": [
+        {
+          "name": "dbo.Test_StoredProcedure",
+          "children": [
+            {
+              "name": "Tables"
+            },
+            {
+              "name": "Views",
+              "children": [
+                {
+                  "name": "dbo.view_test_table",
+                  "children": [
+                    {
+                      "name": "Tables",
+                      "children": [
+                        {
+                          "name": "dbo.Test_Table"
+                        },
+                        {
+                          "name": "dbo.Test_Table_2"
+                        },
+                        {
+                          "name": "dbo.Test_Table_3"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Dependent Pipelines"
+    },
+    {
+      "name": "Nonexistent",
+      "children": [
+        {
+          "name": "Tables"
+        },
+        {
+          "name": "Stored Procedures"
+        },
+        {
+          "name": "Dependent Pipelines"
+        }
+      ]
+    }
+  ]
+}

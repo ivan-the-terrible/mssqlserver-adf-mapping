@@ -1,6 +1,7 @@
 # SQL Server  Dependency Graphing w/ADF Pipelines
 
 This tool is meant to run and output a count of all tables, views, stored procedures, and pipelines and how they're interlinked.
+Check out the example output here: <https://github.com/ivan-the-terrible/mssqlserver-adf-mapping/blob/master/images/test_db/pdf/Test_Pipeline.pdf>
 
 ## Logic
 
